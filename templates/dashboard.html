@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Financial Assistant Dashboard</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 40px;
+        }
+        .chat-container {
+            max-width: 600px;
+        }
+        #response {
+            white-space: pre-wrap;
+            background: #f1f1f1;
+            padding: 10px;
+            margin-top: 20px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Welcome to Your Financial Assistant</h2>
+    <div class="chat-container">
+        <label for="query">Ask your question:</label><br>
+        <textarea id="query" rows="4" cols="60" placeholder="E.g., Can I invest more in mutual funds next month?"></textarea><br><br>
+        <button onclick="askGemini()">Submit</button>
+
+        <div id="response"></div>
+    </div>
+
+    <script>
+        async function askGemini() {
+            const query = document.getElementById("query").value;
+            const responseDiv = document.getElementById("response");
+            responseDiv.innerText = "Processing...";
+
+            const res = await fetch('/ask_gemini', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query })
+            });
+
+            const data = await res.json();
+            if (data.response) {
+                responseDiv.innerText = data.response;
+            } else {
+                responseDiv.innerText = "Error: " + data.error;
+            }
+        }
+    </script>
+</body>
+</html>
+

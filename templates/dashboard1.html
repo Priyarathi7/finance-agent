@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Financial Dashboard</title>
+    <script>
+        async function fetchData(tool) {
+            const res = await fetch(`/fetch/${tool}`);
+            const data = await res.json();
+            document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+        }
+    </script>
+</head>
+<body>
+    <h1>Welcome to Your Financial Dashboard</h1>
+    <button onclick="fetchData('fetch_bank_transactions')">Bank Transactions</button>
+    <button onclick="fetchData('fetch_credit_report')">Credit Report</button>
+    <button onclick="fetchData('fetch_epf_details')">EPF Details</button>
+    <button onclick="fetchData('fetch_mf_transactions')">Mutual Fund Transactions</button>
+    <button onclick="fetchData('fetch_net_worth')">Net Worth</button>
+    <button onclick="fetchData('fetch_stock_transactions')">Stock Transactions</button>
+
+    <h3>Response Output:</h3>
+    <pre id="output" style="margin-top:20px; white-space: pre-wrap; border: 1px solid #ccc; padding: 10px; background-color: #f0f0f0;"></pre>
+</body>
+</html>
+

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login Required</title>
+</head>
+<body>
+    <h2>You need to login to continue</h2>
+    <a href="{{ login_url }}" target="_blank">Click here to login</a>
+    <br><br>
+    <form action="/login_done">
+        <button type="submit">I've logged in. Continue</button>
+    </form>
+</body>
+</html>
+
