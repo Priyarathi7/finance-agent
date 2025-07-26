@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>View Financial Data</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <!-- Main Content -->
+  <div class="flex-1 p-8 overflow-y-auto">
+    <div class="flex items-center p-4 mb-4">
+      <a href="/" class="flex items-center space-x-2 hover:underline">
+        <img src="/static/back-icon-65506-512.png" alt="Back" class="w-5 h-5">
+      </a>
+      <h1 class="ml-6 text-xl font-semibold text-gray-800">View all your financial data at one place</h1>
+    </div>
+
+    <div class="grid grid-cols-2 gap-6">
+      <button onclick="fetchData('fetch_bank_transactions')" class="bg-white hover:bg-blue-50 shadow p-6 rounded-lg text-left">
+        <h3 class="font-semibold text-lg">Bank Transactions</h3>
+        <p class="text-sm text-gray-600">View your bank-level transaction history</p>
+      </button>
+
+      <button onclick="fetchData('fetch_credit_report')" class="bg-white hover:bg-blue-50 shadow p-6 rounded-lg text-left">
+        <h3 class="font-semibold text-lg">Credit Report</h3>
+        <p class="text-sm text-gray-600">Get credit score and loan history</p>
+      </button>
+
+      <button onclick="fetchData('fetch_mf_transactions')" class="bg-white hover:bg-blue-50 shadow p-6 rounded-lg text-left">
+        <h3 class="font-semibold text-lg">Mutual Fund Transactions</h3>
+        <p class="text-sm text-gray-600">See your MF purchase and sell records</p>
+      </button>
+
+      <button onclick="fetchData('fetch_epf_details')" class="bg-white hover:bg-blue-50 shadow p-6 rounded-lg text-left">
+        <h3 class="font-semibold text-lg">EPF Details</h3>
+        <p class="text-sm text-gray-600">Track provident fund contributions</p>
+      </button>
+
+      <button onclick="fetchData('fetch_net_worth')" class="bg-white hover:bg-blue-50 shadow p-6 rounded-lg text-left">
+        <h3 class="font-semibold text-lg">Net Worth</h3>
+        <p class="text-sm text-gray-600">Analyze your current net worth</p>
+      </button>
+
+      <button onclick="fetchData('fetch_stock_transactions')" class="bg-white hover:bg-blue-50 shadow p-6 rounded-lg text-left">
+        <h3 class="font-semibold text-lg">Stock Transactions</h3>
+        <p class="text-sm text-gray-600">View equity investment details</p>
+      </button>
+    </div>
+
+    <!-- Rendered data output -->
+    <div id="data-output" class="mt-10"></div>
+  </div>
+
+  <script>
+    async function fetchData(type) {
+      const res = await fetch(`/api/financial_info?type=${type}`);
+      const data = await res.json();
+      renderTable(data, type);
+    }
+
+    function renderTable(data, type) {
+      console.log("Type:", type);
+  switch (type) {
+    case "fetch_epf_details":
+      return renderEPF(data);
+    case "fetch_stock_transactions":
+      return renderStockTransactions(data);
+    case "fetch_net_worth":
+      return renderNetWorth(data);
+    case "fetch_bank_transactions":
+      return renderBankTransaction(data);
+    case "fetch_credit_report":
+      return renderCreditReport(data);
+    case "fetch_mf_transactions":
+      return renderMFTransactions(data);
+    default:
+      return showError("Unknown data type");
+  }
+
+  function renderBankTransaction(data) {
+  const outputDiv = document.getElementById("data-output");
+  outputDiv.innerHTML = ""; // Clear previous data
+
+  if (!data || !data.bankTransactions || data.bankTransactions.length === 0) {
+    outputDiv.innerHTML = "<p class='text-gray-600'>No bank transactions found.</p>";
+    return;
+  }
+
+  data.bankTransactions.forEach(account => {
+    const { bank, txns } = account;
+
+    const title = document.createElement("h3");
+    title.textContent = `Bank: ${bank}`;
+    title.className = "text-lg font-semibold text-blue-600 mt-6 mb-2";
+    outputDiv.appendChild(title);
+
+    const table = document.createElement("table");
+    table.className = "min-w-full table-auto border mb-6 text-sm";
+
+    const thead = document.createElement("thead");
+    thead.innerHTML = `
+      <tr class="bg-gray-100">
+        <th class="border px-4 py-2">Amount</th>
+        <th class="border px-4 py-2">Narration</th>
+        <th class="border px-4 py-2">Date</th>
+        <th class="border px-4 py-2">Type</th>
+        <th class="border px-4 py-2">Mode</th>
+        <th class="border px-4 py-2">Balance</th>
+      </tr>
+    `;
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+
+    const typeMap = {
+      1: "CREDIT",
+      2: "DEBIT",
+      3: "OPENING",
+      4: "INTEREST",
+      5: "TDS",
+      6: "INSTALLMENT",
+      7: "CLOSING",
+      8: "OTHERS"
+    };
+
+    txns.forEach(txn => {
+      const [amount, narration, date, type, mode, balance] = txn;
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td class="border px-4 py-2">${amount}</td>
+        <td class="border px-4 py-2">${narration}</td>
+        <td class="border px-4 py-2">${date}</td>
+        <td class="border px-4 py-2">${typeMap[type] || type}</td>
+        <td class="border px-4 py-2">${mode}</td>
+        <td class="border px-4 py-2">${balance}</td>
+      `;
+      tbody.appendChild(row);
+    });
+
+    table.appendChild(tbody);
+    outputDiv.appendChild(table);
+  });
+}
+
+
+function renderStockTransactions(data) {
+  const output = document.getElementById("data-output");
+  output.innerHTML = "";
+
+  const txnTypeMap = {
+    1: "BUY",
+    2: "SELL",
+    3: "BONUS",
+    4: "SPLIT"
+  };
+
+  if (!data.stockTransactions || !Array.isArray(data.stockTransactions)) {
+    output.innerHTML = "<p>No valid stock transaction data</p>";
+    return;
+  }
+
+  data.stockTransactions.forEach(stock => {
+    const table = document.createElement("table");
+    table.className = "min-w-full table-auto border-collapse border border-gray-300 mb-6";
+
+    const header = `
+      <thead>
+        <tr class="bg-gray-200">
+          <th class="border px-4 py-2" colspan="4">ISIN: ${stock.isin}</th>
+        </tr>
+        <tr class="bg-gray-100">
+          <th class="border px-4 py-2">Transaction Type</th>
+          <th class="border px-4 py-2">Date</th>
+          <th class="border px-4 py-2">Quantity</th>
+          <th class="border px-4 py-2">NAV Value</th>
+        </tr>
+      </thead>
+    `;
+
+    const bodyRows = stock.txns.map(txn => {
+      const [type, date, quantity, nav] = txn;
+      return `
+        <tr>
+          <td class="border px-4 py-2">${txnTypeMap[type] || type}</td>
+          <td class="border px-4 py-2">${date}</td>
+          <td class="border px-4 py-2">${quantity}</td>
+          <td class="border px-4 py-2">${nav ?? "-"}</td>
+        </tr>
+      `;
+    }).join("");
+
+    const tbody = `<tbody>${bodyRows}</tbody>`;
+    table.innerHTML = header + tbody;
+    output.appendChild(table);
+  });
+}
+
+function renderEPF(data) {
+  const container = document.getElementById("data-output");
+  container.innerHTML = "";
+
+  const account = data.uanAccounts?.[0];
+  if (!account || !account.rawDetails) {
+    container.innerHTML = "<p>No EPF data found.</p>";
+    return;
+  }
+
+  const overall = account.rawDetails.overall_pf_balance;
+  const estDetails = account.rawDetails.est_details;
+
+  // Overall PF Balance Summary
+  const summaryTable = `
+    <h3 class="text-lg font-semibold mb-2">Overall PF Balance</h3>
+    <table class="min-w-full table-auto border mb-6">
+      <thead><tr class="bg-gray-100">
+        <th class="border px-4 py-2">Current PF Balance</th>
+        <th class="border px-4 py-2">Pension Balance</th>
+        <th class="border px-4 py-2">Employee Balance</th>
+        <th class="border px-4 py-2">Employee Credit</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td class="border px-4 py-2">${overall.current_pf_balance}</td>
+          <td class="border px-4 py-2">${overall.pension_balance}</td>
+          <td class="border px-4 py-2">${overall.employee_share_total?.balance || "-"}</td>
+          <td class="border px-4 py-2">${overall.employee_share_total?.credit || "-"}</td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+
+  // Employer-wise Details
+  let estTable = `
+    <h3 class="text-lg font-semibold mb-2">Employer-wise EPF Details</h3>
+    <table class="min-w-full table-auto border">
+      <thead><tr class="bg-gray-100">
+        <th class="border px-4 py-2">Employer</th>
+        <th class="border px-4 py-2">Member ID</th>
+        <th class="border px-4 py-2">DOJ EPF</th>
+        <th class="border px-4 py-2">DOE EPF</th>
+        <th class="border px-4 py-2">Office</th>
+        <th class="border px-4 py-2">Employee Share</th>
+        <th class="border px-4 py-2">Employer Share</th>
+        <th class="border px-4 py-2">Net Balance</th>
+      </tr></thead>
+      <tbody>
+  `;
+
+  estDetails.forEach(est => {
+    estTable += `
+      <tr>
+        <td class="border px-4 py-2">${est.est_name}</td>
+        <td class="border px-4 py-2">${est.member_id}</td>
+        <td class="border px-4 py-2">${est.doj_epf}</td>
+        <td class="border px-4 py-2">${est.doe_epf}</td>
+        <td class="border px-4 py-2">${est.office}</td>
+        <td class="border px-4 py-2">${est.pf_balance.employee_share?.balance || "-"} / ${est.pf_balance.employee_share?.credit || "-"}</td>
+        <td class="border px-4 py-2">${est.pf_balance.employer_share?.balance || "-"} / ${est.pf_balance.employer_share?.credit || "-"}</td>
+        <td class="border px-4 py-2">${est.pf_balance.net_balance}</td>
+      </tr>
+    `;
+  });
+
+  estTable += `</tbody></table>`;
+
+  container.innerHTML = summaryTable + estTable;
+}
+
+function renderNetWorth(data) {
+    const container = document.getElementById("data-output");
+    container.innerHTML = ""; // Clear previous output
+
+    const netWorth = data.netWorthResponse;
+    if (!netWorth) {
+      container.innerHTML = "<p>No Net Worth Data Available.</p>";
+      return;
+    }
+
+    // Create main table for total net worth and asset types
+    const total = netWorth.totalNetWorthValue?.units || 0;
+    let html = `
+      <h3 class="text-xl font-semibold mb-4">Total Net Worth: ₹${total.toLocaleString()}</h3>
+      <table class="min-w-full bg-white border rounded-md">
+        <thead>
+          <tr class="bg-gray-100 text-left">
+            <th class="py-2 px-4 border-b">Asset Type</th>
+            <th class="py-2 px-4 border-b">Value (₹)</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    netWorth.assetValues?.forEach(item => {
+      const label = item.netWorthAttribute.replace("ASSET_TYPE_", "").replace(/_/g, " ");
+      const value = item.value?.units?.toLocaleString() || 0;
+      html += `
+        <tr>
+          <td class="py-2 px-4 border-b capitalize">${label}</td>
+          <td class="py-2 px-4 border-b">₹${value}</td>
+        </tr>
+      `;
+    });
+
+    html += `</tbody></table>`;
+
+    // Optionally include Mutual Fund Analytics (if needed)
+    const mfAnalytics = data.mfSchemeAnalytics?.schemeAnalytics || [];
+    if (mfAnalytics.length > 0) {
+      html += `<h3 class="text-xl font-semibold mt-6 mb-2">Mutual Fund Scheme Details</h3>`;
+      mfAnalytics.forEach(scheme => {
+        const details = scheme.schemeDetail || {};
+        const analytics = scheme.enrichedAnalytics?.analytics?.schemeDetails;
+        if (!analytics) return;
+
+        html += `
+          <div class="border rounded p-4 my-4 shadow bg-white">
+            <h4 class="text-lg font-bold">${details.nameData?.longName || "Unnamed Scheme"}</h4>
+            <p>AMC: ${details.amc}</p>
+            <p>Plan: ${details.planType}</p>
+            <p>Current Value: ₹${analytics.currentValue?.units.toLocaleString()}</p>
+            <p>Invested: ₹${analytics.investedValue?.units.toLocaleString()}</p>
+            <p>Returns: ₹${analytics.absoluteReturns?.units.toLocaleString()}</p>
+            <p>XIRR: ${analytics.XIRR?.toFixed(2)}%</p>
+          </div>
+        `;
+      });
+    }
+
+    container.innerHTML = html;
+  }
+
+  function renderCreditReport(data) {
+    const container = document.getElementById("data-output");
+    container.innerHTML = ""; // Clear previous data
+
+    if (!data || !data.creditReports || data.creditReports.length === 0) {
+      container.innerHTML = "<p>No credit report data available.</p>";
+      return;
+    }
+
+    const report = data.creditReports[0].creditReportData;
+
+    // Extract credit summary
+    const summary = report.creditAccount.creditAccountSummary.account;
+    const balance = report.creditAccount.creditAccountSummary.totalOutstandingBalance;
+
+    const summaryTable = `
+      <h3 class="text-lg font-semibold mb-2">Account Summary</h3>
+      <table class="table-auto w-full border border-gray-300 mb-4">
+        <thead><tr class="bg-gray-100">
+          <th class="border px-4 py-2">Total Accounts</th>
+          <th class="border px-4 py-2">Active</th>
+          <th class="border px-4 py-2">Defaults</th>
+          <th class="border px-4 py-2">Closed</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td class="border px-4 py-2">${summary.creditAccountTotal}</td>
+            <td class="border px-4 py-2">${summary.creditAccountActive}</td>
+            <td class="border px-4 py-2">${summary.creditAccountDefault}</td>
+            <td class="border px-4 py-2">${summary.creditAccountClosed}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 class="text-lg font-semibold mb-2">Outstanding Balances</h3>
+      <table class="table-auto w-full border border-gray-300 mb-4">
+        <thead><tr class="bg-gray-100">
+          <th class="border px-4 py-2">Secured</th>
+          <th class="border px-4 py-2">Unsecured</th>
+          <th class="border px-4 py-2">Total</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td class="border px-4 py-2">₹${balance.outstandingBalanceSecured}</td>
+            <td class="border px-4 py-2">₹${balance.outstandingBalanceUnSecured}</td>
+            <td class="border px-4 py-2">₹${balance.outstandingBalanceAll}</td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+
+    // Extract individual account details
+    const accountRows = report.creditAccount.creditAccountDetails.map(acc => `
+      <tr>
+        <td class="border px-4 py-2">${acc.subscriberName}</td>
+        <td class="border px-4 py-2">${acc.accountType}</td>
+        <td class="border px-4 py-2">${acc.openDate}</td>
+        <td class="border px-4 py-2">${acc.highestCreditOrOriginalLoanAmount}</td>
+        <td class="border px-4 py-2">${acc.currentBalance}</td>
+        <td class="border px-4 py-2">${acc.amountPastDue}</td>
+        <td class="border px-4 py-2">${acc.paymentRating}</td>
+      </tr>
+    `).join("");
+
+    const accountTable = `
+      <h3 class="text-lg font-semibold mb-2">Individual Credit Accounts</h3>
+      <table class="table-auto w-full border border-gray-300 mb-4">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="border px-4 py-2">Institution</th>
+            <th class="border px-4 py-2">Type</th>
+            <th class="border px-4 py-2">Open Date</th>
+            <th class="border px-4 py-2">Loan Amount</th>
+            <th class="border px-4 py-2">Current Balance</th>
+            <th class="border px-4 py-2">Past Due</th>
+            <th class="border px-4 py-2">Rating</th>
+          </tr>
+        </thead>
+        <tbody>${accountRows}</tbody>
+      </table>
+    `;
+
+    container.innerHTML = summaryTable + accountTable;
+  }
+
+  function renderMFTransactions(data) {
+  const container = document.getElementById("data-output");
+  container.innerHTML = ""; // Clear previous content
+
+  if (!data.mfTransactions || data.mfTransactions.length === 0) {
+    container.innerHTML = "<p>No mutual fund transaction data available.</p>";
+      return;
+  }
+
+  data.mfTransactions.forEach(fund => {
+    const title = document.createElement("h3");
+    title.className = "text-lg font-semibold text-blue-600 mt-6 mb-2";
+    title.textContent = `${fund.schemeName} (Folio: ${fund.folioId})`;
+    container.appendChild(title);
+
+    const table = document.createElement("table");
+    table.className = "table-auto w-full mb-6 text-sm border border-gray-300";
+
+    const thead = document.createElement("thead");
+    thead.innerHTML = `
+      <tr class="bg-gray-100">
+        <th class="border px-2 py-1">Type</th>
+        <th class="border px-2 py-1">Date</th>
+        <th class="border px-2 py-1">Price</th>
+        <th class="border px-2 py-1">Units</th>
+        <th class="border px-2 py-1">Amount</th>
+      </tr>`;
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    fund.txns.forEach(txn => {
+      const [type, date, price, units, amount] = txn;
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td class="border px-2 py-1">${type === 1 ? "BUY" : "SELL"}</td>
+        <td class="border px-2 py-1">${date}</td>
+        <td class="border px-2 py-1">${price}</td>
+        <td class="border px-2 py-1">${units}</td>
+        <td class="border px-2 py-1">${amount}</td>`;
+      tbody.appendChild(row);
+    });
+
+    table.appendChild(tbody);
+    container.appendChild(table);
+  });
+}
+
+function showError(message) {
+  const outputDiv = document.getElementById("data-output");
+  outputDiv.innerHTML = `
+    <div style="
+      background-color: #ffe5e5;
+      border: 1px solid #ff4d4f;
+      color: #d8000c;
+      padding: 16px;
+      margin-top: 20px;
+      border-radius: 8px;
+    ">
+      <strong>Error:</strong> ${message}
+    </div>
+  `;
+}
+}
+
+  </script>
+</body>
+</html>
+

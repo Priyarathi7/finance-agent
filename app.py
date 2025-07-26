@@ -2,12 +2,18 @@ from flask import Flask, render_template, request, redirect, jsonify
 import requests
 import json
 
+from dotenv import load_dotenv
+import os
+# Load environment variables from .env file
+load_dotenv()
+
 app = Flask(__name__)
 
 # Constants
 MCP_URL = "https://fi-mcp-dev-931723138542.us-central1.run.app/mcp/stream"
 MCP_SESSION_ID = "mcp-session-594e48ea-fea1-40ef-8c52-7552dd9272af"
-GEMINI_API_KEY = "AIzaSyBPDULDOrhFbhrE3yhTvL5Ja_Xchg-nBOQ"
+#GEMINI_API_KEY = "AIzaSyBPDULDOrhFbhrE3yhTvL5Ja_Xchg-nBOQ"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY");
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
 HEADERS = {
@@ -31,7 +37,8 @@ def call_mcp_tool(tool_name):
     return response
 
 def fetch_all_financial_data():
-    tools = ["fetch_bank_transactions", "fetch_credit_report", "fetch_mutual_fund_transactions", "fetch_epf_summary"]
+    print("inside fetch_all_financial_data")
+    tools = ["fetch_bank_transactions", "fetch_credit_report", "fetch_mf_transactions", "fetch_epf_details", "fetch_net_worth", "fetch_stock_transactions" ]
     result_data = {}
     for tool in tools:
         try:
@@ -49,8 +56,10 @@ def call_gemini_api(user_input, financial_context):
 
     Bank Transactions: {json.dumps(financial_context.get('fetch_bank_transactions'), indent=2)}
     Credit Report: {json.dumps(financial_context.get('fetch_credit_report'), indent=2)}
-    Mutual Fund Transactions: {json.dumps(financial_context.get('fetch_mutual_fund_transactions'), indent=2)}
-    EPF Summary: {json.dumps(financial_context.get('fetch_epf_summary'), indent=2)}
+    Mutual Fund Transactions: {json.dumps(financial_context.get('fetch_mf_transactions'), indent=2)}
+    EPF Summary: {json.dumps(financial_context.get('fetch_epf_details'), indent=2)}
+    Net Worth: {json.dumps(financial_context.get('fetch_net_worth'), indent=2)}
+    Stock Transactiom: {json.dumps(financial_context.get('fetch_stock_transactions'), indent=2)}
 
     Now respond to the user's query based on the above context.
     Query: {user_input}
@@ -107,6 +116,34 @@ def ask_gemini():
 
         answer = gemini_response.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
         return jsonify({"response": answer})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/financial_data')
+def financial_data():
+    return render_template('financial_data.html')
+
+@app.route('/api/financial_info')
+def financial_info():
+    data_type = request.args.get('type')
+    tools = {
+        "fetch_bank_transactions",
+        "fetch_credit_report",
+        "fetch_mf_transactions",
+        "fetch_epf_details",
+        "fetch_net_worth",
+        "fetch_stock_transactions"
+    }
+
+    if data_type not in tools:
+        return jsonify({"error": "Invalid type"}), 400
+
+    try:
+        print(f"Calling FI MCP tool for: {data_type}")
+        res = call_mcp_tool(data_type)
+        json_data = res.json()
+        text_data = json.loads(json_data["result"]["content"][0]["text"])
+        return jsonify(text_data)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
