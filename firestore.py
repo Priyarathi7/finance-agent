@@ -39,6 +39,32 @@ def add_message(conversation_id, message_text, sender):
     # db.collection("conversations").document(conversation_id).update({
     #     "last_updated": datetime.utcnow()
     # })
+def get_conversation(conversation_id):
+    print("conversation_id:",conversation_id)
+    messages = []
+    try:
+        messages_ref = db.collection("conversations").document(conversation_id).collection("messages")
+        #print("messages_ref", messages_ref)
+        docs = messages_ref.order_by("timestamp").stream()
+        
+        for doc in docs:
+            data = doc.to_dict()
+            print("Doc data:", data)  # Debug
+
+            role = data.get("role")
+            text = data.get("text")
+
+            if role and text:
+                messages.append({
+                    "role": "user" if role == "user" else "model",
+                    "text": text
+                })
+    except Exception as e:
+        print(f"Error fetching conversation: {e}")
+    
+    print("Returning messages:", messages)
+    return messages
+
 
 
 def get_messages():

@@ -83,38 +83,61 @@
             return msg;
         }
 
-        async function askGemini() {
-            const query = textarea.value.trim();
-            if (!query) return;
+    const chatHistory = [];
+    let conversation = [];
 
-            sendBtn.disabled = true;
-            appendMessage(query, true);
-            textarea.value = "";
+    async function askGemini() {
+  const query = textarea.value.trim();
+  if (!query) return;
 
-            // Show "Processing..." as placeholder
-            const loadingMsg = appendMessage("Processing...", false, true);
+  sendBtn.disabled = true;
 
-            try {
-                const res = await fetch('/ask_gemini', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ query })
-                });
+  // Append user's message to the chat UI
+  appendMessage(query, true);
+  textarea.value = "";
 
-                const data = await res.json();
-                if (data.response) {
-                    loadingMsg.innerText = data.response;
-                } else {
-                    loadingMsg.innerText = "Error: " + data.error;
-                }
-            } catch (err) {
-                loadingMsg.innerText = "Network error. Please try again.";
-            } finally {
-                sendBtn.disabled = false;
-            }
-        }
+  // Store user message in conversation history
+  conversation.push({ role: "user", text: query });
+
+  // Display loading message
+  const loadingMsg = appendMessage("Processing...", false, true);
+
+  // Slice off the latest user message to keep in sync with backend formatting
+  const history = conversation.slice(0, -1);
+
+  // Debug: Log all key pieces
+  console.log("Sending query:", query);
+  console.log("History being sent:", JSON.stringify(history, null, 2));
+
+  try {
+    const res = await fetch('/ask_gemini', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query, history })
+    });
+
+    const data = await res.json();
+    console.log(" Response received:", data);
+
+    if (data.response) {
+      loadingMsg.innerText = data.response;
+
+      // Store assistant response in history
+      conversation.push({ role: "model", text: data.response });
+    } else {
+      loadingMsg.innerText = "Error: " + data.error;
+      console.error("Error in response:", data.error);
+    }
+  } catch (err) {
+    loadingMsg.innerText = "Network error. Please try again.";
+    console.error("Network error:", err);
+  } finally {
+    sendBtn.disabled = false;
+  }
+}
+
     </script>
 </body>
 </html>
