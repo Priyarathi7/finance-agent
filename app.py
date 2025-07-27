@@ -1,18 +1,20 @@
+# app.py
 from flask import Flask, render_template, request, redirect, jsonify
 import requests
 import json
-
 from dotenv import load_dotenv
 import os
-# Load environment variables from .env file
-load_dotenv()
+import uuid
+from firestore import create_conversation, add_message, get_messages
+
+# Load environment variables
+load_dotenv(".env")
 
 app = Flask(__name__)
 
 # Constants
 MCP_URL = "https://fi-mcp-dev-931723138542.us-central1.run.app/mcp/stream"
 MCP_SESSION_ID = "mcp-session-594e48ea-fea1-40ef-8c52-7552dd9272af"
-#GEMINI_API_KEY = "AIzaSyBPDULDOrhFbhrE3yhTvL5Ja_Xchg-nBOQ"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY");
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
@@ -22,6 +24,7 @@ HEADERS = {
 }
 
 logged_in = False
+
 
 def call_mcp_tool(tool_name):
     payload = {
@@ -83,8 +86,8 @@ def call_gemini_api(user_input, financial_context):
         headers=headers,
         json=payload
     )
-
     return response.json()
+
 
 @app.route('/')
 def home():
@@ -111,11 +114,16 @@ def login_done():
 def ask_gemini():
     try:
         user_input = request.json.get("query")
+        conversation_id = request.json.get("conversation_id")
+        if not conversation_id:
+            conversation_id = create_conversation(None)
+
+        add_message(conversation_id, user_input, "user")
         financial_data = fetch_all_financial_data()
         gemini_response = call_gemini_api(user_input, financial_data)
-
         answer = gemini_response.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-        return jsonify({"response": answer})
+        add_message(conversation_id, answer, "agent")
+        return jsonify({"response": answer, "conversation_id": conversation_id})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -137,9 +145,7 @@ def financial_info():
 
     if data_type not in tools:
         return jsonify({"error": "Invalid type"}), 400
-
     try:
-        print(f"Calling FI MCP tool for: {data_type}")
         res = call_mcp_tool(data_type)
         json_data = res.json()
         text_data = json.loads(json_data["result"]["content"][0]["text"])
@@ -147,6 +153,16 @@ def financial_info():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+@app.route("/conversations", methods=["GET"])
+def fetch_conversations():
+    return jsonify(get_messages())
+
+
+@app.route("/messages/<conversation_id>", methods=["GET"])
+def fetch_messages(conversation_id):
+    return jsonify(get_messages(conversation_id))
+
+
 if __name__ == '__main__':
     app.run(debug=True)
-
