@@ -15,7 +15,7 @@ class GraphState(TypedDict):
     context: dict
 
 # Init LLM and memory
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key="AIzaSyBPDULDOrhFbhrE3yhTvL5Ja_Xchg-nBOQ")
+llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key="")
 memory = ConversationBufferMemory(memory_key="history", return_messages=True)
 conversation = ConversationChain(llm=llm, memory=memory)
 
